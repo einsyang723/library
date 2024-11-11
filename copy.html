@@ -1,0 +1,31 @@
+<div id="fb-root"></div>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v21.0"></script>
+<div id="fb-page-container" style="width: 100%;">
+    <div class="fb-page" data-href="https://www.facebook.com/CCULIB/" data-tabs="timeline" data-width="" data-height="700" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="false">
+        <blockquote cite="https://www.facebook.com/CCULIB/" class="fb-xfbml-parse-ignore">
+            <a href="https://www.facebook.com/CCULIB/">國立中正大學圖書館 National Chung Cheng University Library</a>
+        </blockquote>
+    </div>
+</div>
+<script>
+    window.fbAsyncInit = function() {
+        FB.init({
+            xfbml: true,
+            version: 'v21.0'
+        });
+    };
+    
+    function adjustFbPageWidth() {
+        var fbPageContainer = document.getElementById('fb-page-container');
+        if (window.innerWidth < 768) {
+            fbPageContainer.style.width = '320px';
+        } else {
+            fbPageContainer.style.width = '500px';
+        }
+        FB.XFBML.parse();
+    }
+    
+    window.addEventListener('load', adjustFbPageWidth);
+    window.addEventListener('resize', adjustFbPageWidth);
+</script>
+

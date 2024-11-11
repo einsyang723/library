@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Facebook 粉專</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .cover-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            margin-bottom: -50px;
+        }
+
+        .page-info {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .profile-image {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            border: 4px solid white;
+            position: relative;
+            margin-left: 20px;
+        }
+
+        .page-name {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .like-count {
+            color: #65676B;
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        .post-container {
+            max-width: 900px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-header {
+            padding: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .post-profile-image {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .post-info {
+            flex-grow: 1;
+        }
+
+        .post-page-name {
+            font-weight: 600;
+            color: #050505;
+            text-decoration: none;
+        }
+
+        .post-time {
+            color: #65676B;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .post-content {
+            padding: 4px 16px 16px;
+            font-size: 15px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+
+        .post-image {
+            width: 100%;
+            max-height: 600px;
+            object-fit: contain;
+            margin-top: 12px;
+        }
+
+        .post-actions {
+            border-top: 1px solid #CED0D4;
+            padding: 4px 16px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .action-button {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            color: #65676B;
+            font-weight: 600;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        #error-message {
+            color: red;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #65676B;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug-info" class="debug-info"></div>
+    <div id="error-message"></div>
+    <div id="page-content"></div>
+
+    <script>
+        // 設定
+        const PAGE_ID = '479460698583119';
+        const ACCESS_TOKEN = 'EAAGDhT6UqFsBOzOqvtCw0cGnALojrRyJEuQBoPs8q6kXocWxJkWbU7RtGMVtIBrCxZAnhGeYZBI5VxNz7rzZCIQwZCs4LzM0jUqlWwVeCgW49lUNyZAZA1uKAmBaZB5h64Q1rcQ7s5497jOGmmyIHIkMCGtFu6U4OzgeC6A97ksstvYRtDv8io8k6TJvaVePDuJ';
+        
+        function debugLog(title, data) {
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.innerHTML += `
+                <strong>${title}:</strong>
+                <br>
+                ${JSON.stringify(data, null, 2)}
+                <br><br>
+            `;
+        }
+
+        async function loadPageContent() {
+            try {
+                // 修正粉專基本資訊的請求
+                const pageResponse = await fetch(
+                    `https://graph.facebook.com/v18.0/${PAGE_ID}?fields=name,followers_count,picture{url},cover{source}&access_token=${ACCESS_TOKEN}`
+                );
+                const pageData = await pageResponse.json();
+                
+                debugLog('粉專資料回應', pageData);
+
+                if (pageData.error) {
+                    throw new Error(`Facebook API 錯誤: ${pageData.error.message}`);
+                }
+
+                // 取得最新貼文
+                const postsResponse = await fetch(
+                    `https://graph.facebook.com/v18.0/${PAGE_ID}/posts?fields=message,created_time,full_picture,permalink_url&limit=5&access_token=${ACCESS_TOKEN}`
+                );
+                const postsData = await postsResponse.json();
+                
+                debugLog('貼文資料回應', postsData);
+
+                if (postsData.error) {
+                    throw new Error(`Facebook API 錯誤: ${postsData.error.message}`);
+                }
+
+                // 建立顯示用的資料結構
+                const displayData = {
+                    name: pageData.name,
+                    followers_count: pageData.followers_count || 0,
+                    picture: pageData.picture?.data?.url || '',
+                    cover: pageData.cover?.source || '',
+                    posts: postsData.data || []
+                };
+
+                debugLog('整理後的顯示資料', displayData);
+                
+                displayContent(displayData);
+
+            } catch (error) {
+                document.getElementById('error-message').textContent = 
+                    `錯誤：${error.message}`;
+            }
+        }
+
+        function displayContent(data) {
+            const content = `
+                <!-- 封面圖片 -->
+                ${data.cover ? 
+                    `<img src="${data.cover}" alt="封面圖片" class="cover-image" onerror="this.style.display='none'">` : 
+                    ''
+                }
+                
+                <!-- 粉專資訊 -->
+                <div class="page-info">
+                    ${data.picture ? 
+                        `<img src="${data.picture}" alt="${data.name}" class="profile-image" onerror="this.style.display='none'">` : 
+                        ''
+                    }
+                    <h1 class="page-name">${data.name}</h1>
+                    <div class="like-count">${data.followers_count.toLocaleString()} 位追蹤者</div>
+                </div>
+
+                <!-- 貼文列表 -->
+                ${data.posts.map(post => `
+                    <div class="post-container">
+                        <div class="post-header">
+                            ${data.picture ? 
+                                `<img src="${data.picture}" alt="${data.name}" class="post-profile-image" onerror="this.style.display='none'">` : 
+                                ''
+                            }
+                            <div class="post-info">
+                                <a href="https://www.facebook.com/${PAGE_ID}" class="post-page-name">${data.name}</a>
+                                <div class="post-time">${formatDate(post.created_time)}</div>
+                            </div>
+                        </div>
+                        <div class="post-content">
+                            ${post.message || ''}
+                            ${post.full_picture ? 
+                                `<img src="${post.full_picture}" alt="貼文圖片" class="post-image" onerror="this.style.display='none'">` : 
+                                ''
+                            }
+                        </div>
+                        <div class="post-actions">
+                            <button class="action-button">讚好</button>
+                            <button class="action-button">留言</button>
+                            <button class="action-button">分享</button>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+
+            document.getElementById('page-content').innerHTML = content;
+        }
+
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return new Intl.DateTimeFormat('zh-TW', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(date);
+            } catch (error) {
+                return dateString;
+            }
+        }
+
+        loadPageContent();
+    </script>
+</body>
+</html>
